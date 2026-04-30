@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Catatan Harian</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: linear-gradient(135deg, #4facfe, #00f2fe);
+  --text: #333;
+  --card: white;
+}
+
+body.dark {
+  --bg: #1e1e2f;
+  --text: #eee;
+  --card: #2c2c3c;
+}
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  color: white;
+}
+
+button {
+  padding: 8px 12px;
+  border-radius: 15px;
+  border: none;
+  cursor: pointer;
+}
+
+.container {
+  width: 90%;
+  max-width: 500px;
+  margin: auto;
+}
+
+.card {
+  background: var(--card);
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 15px;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+}
+
+.page { display: none; }
+.active { display: block; }
+
+img {
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div style="display:flex; gap:10px;">
+    <button id="btnBack" onclick="goBack()">←</button>
+    <h3>📖 Catatan</h3>
+  </div>
+
+  <div>
+    <span onclick="toggleMode()">🌙</span>
+    <button onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div id="login" class="page active">
+  <div class="card">
+    <h3>Login</h3>
+    <input id="loginUser" placeholder="Username">
+    <input id="loginPass" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <p><a href="#" onclick="showPage('register')">Register</a></p>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div id="register" class="page">
+  <div class="card">
+    <h3>Register</h3>
+    <input id="regUser" placeholder="Username">
+    <input id="regPass" type="password" placeholder="Password">
+    <button onclick="register()">Daftar</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="home" class="page">
+  <div class="card">
+    <h3>Halo, <span id="namaUser"></span></h3>
+    <button onclick="showPage('tambah')">Tambah</button>
+    <button onclick="showPage('riwayat')">Riwayat</button>
+  </div>
+</div>
+
+<!-- TAMBAH -->
+<div id="tambah" class="page">
+  <div class="card">
+    <textarea id="isiCatatan" placeholder="Tulis catatan..."></textarea>
+
+    <!-- FOTO -->
+    <input type="file" id="foto" accept="image/*" capture="environment">
+
+    <button onclick="simpanCatatan()">Simpan</button>
+  </div>
+</div>
+
+<!-- RIWAYAT -->
+<div id="riwayat" class="page">
+  <button onclick="showPage('tambah')">+ Tambah Lagi</button>
+  <div id="listCatatan"></div>
+</div>
+
+</div>
+
+<script>
+let historyPage = [];
+
+// NAVIGASI
+function showPage(id) {
+  let active = document.querySelector('.page.active');
+
+  if (active && active.id !== id) {
+    historyPage.push(active.id);
+  }
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+
+  if (id === 'login' || id === 'register') {
+    btnBack.style.display = 'none';
+  } else {
+    btnBack.style.display = 'inline-block';
+  }
+
+  if (id === 'riwayat') tampilkanCatatan();
+}
+
+// BACK
+function goBack() {
+  if (historyPage.length === 0) return;
+
+  let last = historyPage.pop();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(last).classList.add('active');
+
+  if (last === 'riwayat') tampilkanCatatan();
+}
+
+// LOGIN SYSTEM
+function register() {
+  let user = regUser.value;
+  let pass = regPass.value;
+  if (!user || !pass) return alert("Isi semua!");
+
+  localStorage.setItem("user", JSON.stringify({user, pass}));
+  alert("Berhasil daftar!");
+  showPage('login');
+}
+
+function login() {
+  let user = loginUser.value;
+  let pass = loginPass.value;
+  let data = JSON.parse(localStorage.getItem("user"));
+
+  if (!data || user !== data.user || pass !== data.pass) {
+    alert("Login gagal!");
+    return;
+  }
+
+  localStorage.setItem("login", user);
+  masuk();
+}
+
+function masuk() {
+  let user = localStorage.getItem("login");
+  if (!user) showPage('login');
+  else {
+    namaUser.innerText = user;
+    showPage('home');
+  }
+}
+
+function logout() {
+  localStorage.removeItem("login");
+  showPage('login');
+}
+
+// SIMPAN CATATAN + FOTO
+function simpanCatatan() {
+  let isi = isiCatatan.value;
+  let file = foto.files[0];
+
+  if (!isi) return alert("Isi dulu!");
+
+  let reader = new FileReader();
+
+  reader.onload = function(e) {
+    let gambar = e.target.result;
+
+    let data = JSON.parse(localStorage.getItem("catatan")) || [];
+    data.push({
+      isi,
+      tanggal: new Date().toLocaleString(),
+      gambar: file ? gambar : null
+    });
+
+    localStorage.setItem("catatan", JSON.stringify(data));
+
+    isiCatatan.value = "";
+    foto.value = "";
+
+    showPage('riwayat');
+  };
+
+  if (file) reader.readAsDataURL(file);
+  else reader.onload({ target: { result: null } });
+}
+
+// TAMPILKAN
+function tampilkanCatatan() {
+  let list = document.getElementById("listCatatan");
+  list.innerHTML = "";
+
+  let data = JSON.parse(localStorage.getItem("catatan")) || [];
+
+  if (data.length === 0) {
+    list.innerHTML = "<p>Tidak ada catatan 😢</p>";
+    return;
+  }
+
+  data.reverse().forEach(c => {
+    list.innerHTML += `
+      <div class="card">
+        <small>${c.tanggal}</small>
+        <p>${c.isi}</p>
+        ${c.gambar ? `<img src="${c.gambar}">` : ""}
+      </div>
+    `;
+  });
+}
+
+// DARK MODE
+function toggleMode() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('mode', document.body.classList.contains('dark') ? 'dark' : 'light');
+}
+
+// LOAD
+window.onload = () => {
+  if (localStorage.getItem('mode') === 'dark') {
+    document.body.classList.add('dark');
+  }
+  masuk();
+};
+</script>
+
+</body>
+</html>
